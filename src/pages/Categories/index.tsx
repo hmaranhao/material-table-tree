@@ -8,56 +8,77 @@ import MyTable from '../../components/MyTable';
 import AddOrEdit from './addOrEdit';
 
 import { Container, TopBar, Title, List } from './styles'
-import { isNull } from 'util';
 
 interface Category {
   id: number;
   name: string;
-  parent: any;
+  parentId: any;
 }
 
 const dataMock = [
   {
     id: 1,
     name: 'Eletrônicos',
-    parent: null
+    parentId: null
   },
   {
     id: 2,
     name: 'Smart-Phones',
-    parent: { id: 1, name: 'Eletrônicos' }
+    parentId: 1
   },
   {
     id: 3,
     name: 'LG',
-    parent: { id: 2, name: 'Smart-Phones' }
+    parentId: 2
   },
   {
     id: 4,
     name: 'Vestuário',
-    parent: null
+    parentId: null
   },
   {
     id: 5,
     name: 'Camisas Masculinas',
-    parent: { id: 4, name: 'Vestuário' }
+    parentId: 4
   },
   {
     id: 6,
     name: 'Camisas Femininas',
-    parent: { id: 4, name: 'Vestuário' }
+    parentId: 4
   }
 ]
 
 const Categories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>(dataMock)
-  const [addOrEdit, setAddOrEdit] = useState({ open: false })
+  const [addOrEdit, setAddOrEdit] = useState({ open: false, data: { id: 0,  name: '', parentId: 0 } })
+
+  async function addOrEditCategory(verb: string, category: any){
+    let response = dataMock
+    
+    if(verb === 'put'){
+      response = await Promise.resolve(categories.map(c => {
+        if(c.id === category.id){
+          return category
+        }
+        return c
+      }))
+    }else if(verb === 'post'){
+      response = await Promise.resolve([...categories, {...category, id: Number(new Date().getTime()) }])
+    }
+    setAddOrEdit({ open: false, data: { id: 0,  name: '', parentId: 0 } })
+    setCategories(response)
+  }
+
+  async function deleteCategory(category:any) {
+    const response = await Promise.resolve(categories.filter((c: any) => c.id !== category.id))
+    setCategories(response)
+  }
 
   return (
     <Container>
       <TopBar>
         <Title>Categorias</Title>
-        <IconButton onClick={() => setAddOrEdit({ open: true })}>
+        <IconButton onClick={() => setAddOrEdit({ open: true, data: { id: 0,  name: '', parentId: 0 } })}>
           <Add style={{ color: '#FB7A00' }} />
         </IconButton>
       </TopBar>
@@ -72,23 +93,30 @@ const Categories: React.FC = () => {
           ]}
           parentChildData={
             (row: Category, rows: Category[]) => {
-              return rows.find((category: Category) => category.id === row?.parent?.id)
+              return rows.find((category: Category) => category.id == row?.parentId)
             }
           }
           actions={
             [
               {
-                icon: () => (<Edit />),
+                icon: () => (<Add style={{ color: '#FB7A00' }} />),
                 tooltip: 'Editar',
                 onClick: (event: any, rowData: Category) => {
-                  // Do save operation
+                  setAddOrEdit({ open: true, data: { id: 0, name: '', parentId: rowData.id } })
                 }
               },
               {
-                icon: () => (<DeleteOutline />),
+                icon: () => (<Edit style={{ color: '#FB7A00' }} />),
+                tooltip: 'Editar',
+                onClick: (event: any, rowData: Category) => {
+                  setAddOrEdit({ open: true, data: rowData })
+                }
+              },
+              {
+                icon: () => (<DeleteOutline style={{ color: '#FB7A00' }} />),
                 tooltip: 'Apagar',
                 onClick: (event: any, rowData: Category) => {
-                  // Do save operation
+                  deleteCategory(rowData)
                 }
               },
 
@@ -98,7 +126,10 @@ const Categories: React.FC = () => {
       </List>
       {addOrEdit.open && 
         <AddOrEdit 
-          onHide={() => setAddOrEdit({ open: false })}
+          onHide={() => setAddOrEdit({ open: false, data: { id: 0,  name: '', parentId: 0 } })}
+          addOrEditCategory={addOrEditCategory}
+          categories={categories}
+          data={addOrEdit.data}
         />
       }
     </Container>
